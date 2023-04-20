@@ -58,6 +58,21 @@ fn create_all() {
 }
 
 #[test]
+fn load_twice() {
+    let (lib1, data1) = get_model("throw_data");
+    let (lib2, data2) = get_model("throw_data");
+    
+    let Err(_) = Model::new(&lib1, data1, 42) else {
+        panic!("Did not return error")
+    };
+    let Err(_) = Model::new(&lib2, data2, 42) else {
+        panic!("Did not return error")
+    };
+    drop(lib1);
+    drop(lib2);
+}
+
+#[test]
 fn throw_data() {
     let (lib, data) = get_model("throw_data");
     let Err(err) = Model::new(&lib, data, 42) else {

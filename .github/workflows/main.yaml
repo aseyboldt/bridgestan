@@ -302,8 +302,10 @@ jobs:
 
       - name: Run rust tests
         working-directory: ./rust
+        timeout-minutes: 15
         env:
           LIBCLANG_PATH: ${{ runner.temp }}/llvm/lib
           LLVM_CONFIG_PATH: ${{ runner.temp }}/llvm/bin/llvm-config
         run: |
+          cargo test -- load_twice
           cargo test --verbose
