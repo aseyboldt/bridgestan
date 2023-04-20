@@ -1,7 +1,8 @@
 use std::{
     f64::consts::PI,
     ffi::CString,
-    path::{Path, PathBuf}, thread::spawn,
+    path::{Path, PathBuf},
+    thread::spawn,
 };
 
 use approx::assert_ulps_eq;
@@ -58,6 +59,42 @@ fn create_all() {
 }
 
 #[test]
+fn create_all_parallel() {
+    let base = model_dir();
+    let names: Vec<String> = base
+        .read_dir()
+        .unwrap()
+        .map(|path| {
+            let path = path.unwrap().path();
+            path.file_name().unwrap().to_str().unwrap().to_string()
+        })
+        .collect();
+
+    let handles: Vec<_> = names
+        .into_iter()
+        .map(|name| {
+            spawn(move || {
+                if (&name == "logistic") | (&name == "regression") | (&name == "syntax_error") {
+                    return;
+                }
+
+                let (lib, data) = get_model(&name);
+                // Create the model with a reference
+                let Ok(model) = Model::new(&lib, data.as_ref(), 42) else {
+                    // Only those two models should fail to create.
+                    assert!((name == "ode") | (name == "throw_data"));
+                    return;
+                };
+                assert!(model.name().unwrap().contains(&name));
+            })
+        })
+        .collect();
+    handles
+        .into_iter()
+        .for_each(|handle| handle.join().unwrap())
+}
+
+#[test]
 fn load_after_unload() {
     let (lib1, data1) = get_model("throw_data");
     let Err(_) = Model::new(&lib1, data1, 42) else {
@@ -76,7 +113,7 @@ fn load_after_unload() {
 fn load_twice() {
     let (lib1, data1) = get_model("throw_data");
     let (lib2, data2) = get_model("throw_data");
-    
+
     let Err(_) = Model::new(&lib1, data1, 42) else {
         panic!("Did not return error")
     };
@@ -99,7 +136,9 @@ fn load_parallel() {
             })
         })
         .collect();
-    handles.into_iter().for_each(|handle| handle.join().unwrap())
+    handles
+        .into_iter()
+        .for_each(|handle| handle.join().unwrap())
 }
 
 #[test]
