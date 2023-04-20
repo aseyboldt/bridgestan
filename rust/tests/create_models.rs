@@ -1,7 +1,7 @@
 use std::{
     f64::consts::PI,
     ffi::CString,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, thread::spawn,
 };
 
 use approx::assert_ulps_eq;
@@ -58,6 +58,21 @@ fn create_all() {
 }
 
 #[test]
+fn load_after_unload() {
+    let (lib1, data1) = get_model("throw_data");
+    let Err(_) = Model::new(&lib1, data1, 42) else {
+        panic!("Did not return error")
+    };
+    drop(lib1);
+
+    let (lib2, data2) = get_model("throw_data");
+    let Err(_) = Model::new(&lib2, data2, 42) else {
+        panic!("Did not return error")
+    };
+    drop(lib2);
+}
+
+#[test]
 fn load_twice() {
     let (lib1, data1) = get_model("throw_data");
     let (lib2, data2) = get_model("throw_data");
@@ -70,6 +85,21 @@ fn load_twice() {
     };
     drop(lib1);
     drop(lib2);
+}
+
+#[test]
+fn load_parallel() {
+    let handles: Vec<_> = (0..50)
+        .map(|_| {
+            spawn(|| {
+                let (lib1, data1) = get_model("throw_data");
+                let Err(_) = Model::new(&lib1, data1, 42) else {
+                    panic!("Did not return error")
+                };
+            })
+        })
+        .collect();
+    handles.into_iter().for_each(|handle| handle.join().unwrap())
 }
 
 #[test]

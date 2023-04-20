@@ -307,5 +307,9 @@ jobs:
           LIBCLANG_PATH: ${{ runner.temp }}/llvm/lib
           LLVM_CONFIG_PATH: ${{ runner.temp }}/llvm/bin/llvm-config
         run: |
-          cargo test -- load_twice
-          cargo test --verbose
+          cargo test -- --test-threads 1 load_twice
+          cargo test -- --test-threads 1 load_after_unload
+          cargo test -- --test-threads 1 create_all
+          cargo test -- --test-threads 1 load_parallel
+          cargo test --verbose -- --test-threads 1
+          cargo test --verbose --
