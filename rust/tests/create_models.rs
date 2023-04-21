@@ -78,7 +78,14 @@ fn create_all_late_drop_bwd() {
         })
         .map(|name| {
             println!("Load {}", name);
-            let (lib, _) = get_model(&name);
+            let (lib, data) = get_model(&name);
+            let Ok(model) = Model::new(&lib, data.as_ref(), 42) else {
+                // Only those two models should fail to create.
+                assert!((name == "ode") | (name == "throw_data"));
+                return (lib, name)
+            };
+            assert!(model.name().unwrap().contains(&name));
+            drop(model);
             (lib, name)
         })
         .collect();
@@ -110,7 +117,14 @@ fn create_all_late_drop_fwd() {
         })
         .map(|name| {
             println!("Load {}", name);
-            let (lib, _) = get_model(&name);
+            let (lib, data) = get_model(&name);
+            let Ok(model) = Model::new(&lib, data.as_ref(), 42) else {
+                // Only those two models should fail to create.
+                assert!((name == "ode") | (name == "throw_data"));
+                return (lib, name)
+            };
+            assert!(model.name().unwrap().contains(&name));
+            drop(model);
             (lib, name)
         })
         .collect();
@@ -143,7 +157,6 @@ fn create_all_thread_serial() {
                 }
 
                 let (lib, data) = get_model(&name);
-                /*
                 // Create the model with a reference
                 let Ok(model) = Model::new(&lib, data.as_ref(), 42) else {
                     // Only those two models should fail to create.
@@ -151,7 +164,6 @@ fn create_all_thread_serial() {
                     return;
                 };
                 assert!(model.name().unwrap().contains(&name));
-                */
             }).join().unwrap()
         })
     //handles
@@ -180,7 +192,6 @@ fn create_all_parallel() {
                 }
 
                 let (lib, data) = get_model(&name);
-                /*
                 // Create the model with a reference
                 let Ok(model) = Model::new(&lib, data.as_ref(), 42) else {
                     // Only those two models should fail to create.
@@ -188,7 +199,6 @@ fn create_all_parallel() {
                     return;
                 };
                 assert!(model.name().unwrap().contains(&name));
-                */
             })
         })
         .collect();
