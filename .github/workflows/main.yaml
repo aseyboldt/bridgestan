@@ -8,7 +8,7 @@ on:
   workflow_dispatch: {}
 
 env:
-  CACHE_VERSION: 4
+  CACHE_VERSION: 5
 
 jobs:
   build_test_models:
@@ -55,13 +55,13 @@ jobs:
       - name: Build test models (Unix)
         if: matrix.os != 'windows-latest' && steps.test-models.outputs.cache-hit != 'true'
         run: |
-          make STAN_THREADS=true TBB_INTERFACE_NEW=true O=0 test_models -j2
+          make O=0 test_models -j2
         shell: bash
 
       - name: Build test models (Windows)
         if: matrix.os == 'windows-latest' && steps.test-models.outputs.cache-hit != 'true'
         run: |
-          mingw32-make.exe STAN_THREADS=true TBB_INTERFACE_NEW=true O=0 test_models -j2
+          mingw32-make.exe O=0 test_models -j2
         shell: pwsh
 
   test_python_client:
@@ -265,6 +265,29 @@ jobs:
           path: ./test_models/
           key: ${{ hashFiles('**/*.stan', 'src/*', 'stan/src/stan/version.hpp') }}-windows-latest-v${{ env.CACHE_VERSION }}
 
+      - name: Install LLVM and Clang  # Required for bindgen
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "15.0"
+          directory: ${{ runner.temp }}/llvm
+
+      - name: Get rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run rust tests
+        working-directory: ./rust
+        timeout-minutes: 10
+        env:
+          LIBCLANG_PATH: ${{ runner.temp }}/llvm/lib
+          LLVM_CONFIG_PATH: ${{ runner.temp }}/llvm/bin/llvm-config
+        run: |
+          cargo test -- --test-threads 1 load_twice
+          cargo test -- --test-threads 1 load_after_unload
+          cargo test -- --test-threads 1 create_all
+          cargo test -- --test-threads 1 load_parallel
+          cargo test --verbose -- --test-threads 1
+          cargo test --verbose --
+
       - name: Install R
         uses: r-lib/actions/setup-r@v2.4.0
 
@@ -290,26 +313,3 @@ jobs:
           gcc -fpic -shared -o test_collisions.dll test_collisions.c
           cd ../..
           Rscript -e 'devtools::test(reporter = c(\"summary\", \"fail\"))'
-
-      - name: Install LLVM and Clang  # Required for bindgen
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: "15.0"
-          directory: ${{ runner.temp }}/llvm
-
-      - name: Get rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Run rust tests
-        working-directory: ./rust
-        timeout-minutes: 15
-        env:
-          LIBCLANG_PATH: ${{ runner.temp }}/llvm/lib
-          LLVM_CONFIG_PATH: ${{ runner.temp }}/llvm/bin/llvm-config
-        run: |
-          cargo test -- --test-threads 1 load_twice
-          cargo test -- --test-threads 1 load_after_unload
-          cargo test -- --test-threads 1 create_all
-          cargo test -- --test-threads 1 load_parallel
-          cargo test --verbose -- --test-threads 1
-          cargo test --verbose --

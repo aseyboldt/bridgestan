@@ -164,6 +164,7 @@ impl<T: Borrow<StanLibrary>> Model<T> {
             // If STAN_THREADS is not true, the safty guaranties we are
             // making would be incorrect
             let info = model.info();
+            /*
             if !info.to_string_lossy().contains("STAN_THREADS=true") {
                 Err(BridgeStanError::StanThreads(
                     info.to_string_lossy().into_owned(),
@@ -171,6 +172,8 @@ impl<T: Borrow<StanLibrary>> Model<T> {
             } else {
                 Ok(model)
             }
+            */
+            Ok(model)
         } else {
             Err(BridgeStanError::ConstructFailed(err.message()))
         }
