@@ -87,7 +87,7 @@ fn create_all_parallel() {
                 //};
                 //assert!(model.name().unwrap().contains(&name));
                 //drop(model);
-                forget(lib);
+                //forget(lib);
             })
         })
         .collect();
