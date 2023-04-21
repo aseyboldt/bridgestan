@@ -286,6 +286,7 @@ jobs:
           cargo test -- --test-threads 1 --nocapture create_all_late_drop_fwd
           cargo test -- --test-threads 1 --nocapture create_all_late_drop_bwd
           cargo test -- --test-threads 1 --nocapture create_all_serial
+          cargo test -- --test-threads 1 --nocapture create_all_thread_serial
           cargo test -- --test-threads 1 --nocapture load_parallel
           cargo test --verbose -- --test-threads 1 --nocapture
           cargo test --verbose -- --nocapture

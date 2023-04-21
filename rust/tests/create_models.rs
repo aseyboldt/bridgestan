@@ -123,6 +123,43 @@ fn create_all_late_drop_fwd() {
 }
 
 #[test]
+fn create_all_thread_serial() {
+    let base = model_dir();
+    let names: Vec<String> = base
+        .read_dir()
+        .unwrap()
+        .map(|path| {
+            let path = path.unwrap().path();
+            path.file_name().unwrap().to_str().unwrap().to_string()
+        })
+        .collect();
+
+    names
+        .into_iter()
+        .for_each(|name| {
+            spawn(move || {
+                if (&name == "logistic") | (&name == "regression") | (&name == "syntax_error") {
+                    return;
+                }
+
+                let (lib, data) = get_model(&name);
+                /*
+                // Create the model with a reference
+                let Ok(model) = Model::new(&lib, data.as_ref(), 42) else {
+                    // Only those two models should fail to create.
+                    assert!((name == "ode") | (name == "throw_data"));
+                    return;
+                };
+                assert!(model.name().unwrap().contains(&name));
+                */
+            }).join().unwrap()
+        })
+    //handles
+        //.into_iter()
+        //.for_each(|handle| handle.join().unwrap())
+}
+
+#[test]
 fn create_all_parallel() {
     let base = model_dir();
     let names: Vec<String> = base
