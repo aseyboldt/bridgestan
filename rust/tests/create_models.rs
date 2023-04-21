@@ -2,7 +2,7 @@ use std::{
     f64::consts::PI,
     ffi::CString,
     path::{Path, PathBuf},
-    thread::spawn,
+    thread::spawn, mem::forget,
 };
 
 use approx::assert_ulps_eq;
@@ -86,6 +86,8 @@ fn create_all_parallel() {
                     return;
                 };
                 assert!(model.name().unwrap().contains(&name));
+                drop(model);
+                forget(lib);
             })
         })
         .collect();
