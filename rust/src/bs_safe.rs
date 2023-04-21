@@ -30,7 +30,10 @@ static STAN_LOADER: Lazy<StanLoader> = Lazy::new(|| {
 });
 
 /// A loaded shared library for a stan model
-pub struct StanLibrary(ManuallyDrop<ffi::Bridgestan>);
+pub struct StanLibrary {
+    lib: ManuallyDrop<ffi::Bridgestan>,
+    name: String,
+}
 
 /// Error type for bridgestan interface
 #[derive(Error, Debug)]
@@ -58,7 +61,8 @@ type Result<T> = std::result::Result<T, BridgeStanError>;
 /// with the same version as the rust library.
 pub fn open_library<P: AsRef<OsStr>>(path: P) -> Result<StanLibrary> {
     let guard = STAN_LOADER.0.lock().expect("Stan loader lock was poisoned");
-    let library = unsafe { libloading::Library::new(path) }?;
+    println!("Loading library {:?}", path.as_ref().to_str());
+    let library = unsafe { libloading::Library::new(&path) }?;
     let major: libloading::Symbol<*const c_int> = unsafe { library.get(b"bs_major_version") }?;
     let major = unsafe { **major };
     let minor: libloading::Symbol<*const c_int> = unsafe { library.get(b"bs_minor_version") }?;
@@ -75,7 +79,10 @@ pub fn open_library<P: AsRef<OsStr>>(path: P) -> Result<StanLibrary> {
             format!("{}.{}.{}", self_major, self_minor, self_patch),
         ));
     }
-    let lib = unsafe { StanLibrary(ManuallyDrop::new(ffi::Bridgestan::from_library(library)?)) };
+    let lib = unsafe { StanLibrary {
+        lib: ManuallyDrop::new(ffi::Bridgestan::from_library(library)?),
+        name: path.as_ref().to_string_lossy().to_string(),
+    }};
     drop(guard);
     Ok(lib)
 }
@@ -83,7 +90,12 @@ pub fn open_library<P: AsRef<OsStr>>(path: P) -> Result<StanLibrary> {
 impl Drop for StanLibrary {
     fn drop(&mut self) {
         let guard = STAN_LOADER.0.lock().expect("Stan loader lock was poisoned");
-        unsafe { ManuallyDrop::drop(&mut self.0) };
+        println!("Unloading library {}", &self.name);
+        let lib = unsafe { ManuallyDrop::take(&mut self.lib) };
+        let res = lib.into_library().close();
+        if let Err(err) = res {
+            println!("Failed to unload library: {} with error {:?}", &self.name, err);
+        }
         drop(guard);
     }
 }
@@ -92,7 +104,7 @@ impl Deref for StanLibrary {
     type Target = ffi::Bridgestan;
 
     fn deref(&self) -> &Self::Target {
-        return &self.0
+        return &self.lib
     }
 }
 
