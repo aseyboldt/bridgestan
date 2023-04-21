@@ -11,6 +11,7 @@ use std::ptr::null;
 use std::ptr::NonNull;
 use std::str::Utf8Error;
 use std::sync::Mutex;
+use std::thread;
 use once_cell::sync::Lazy;
 
 // This is more or less equivalent to manually defining Display and From<other error types>
@@ -61,7 +62,7 @@ type Result<T> = std::result::Result<T, BridgeStanError>;
 /// with the same version as the rust library.
 pub fn open_library<P: AsRef<OsStr>>(path: P) -> Result<StanLibrary> {
     let guard = STAN_LOADER.0.lock().expect("Stan loader lock was poisoned");
-    println!("Loading library {:?}", path.as_ref().to_str());
+    println!("Loading library {:?} in thread {:?}", path.as_ref().to_str(), thread::current().id());
     let library = unsafe { libloading::Library::new(&path) }?;
     println!("Read library");
     let major: libloading::Symbol<*const c_int> = unsafe { library.get(b"bs_major_version") }?;

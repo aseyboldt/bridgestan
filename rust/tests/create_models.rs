@@ -2,7 +2,7 @@ use std::{
     f64::consts::PI,
     ffi::CString,
     path::{Path, PathBuf},
-    thread::spawn, sync::{Barrier, Arc, Condvar, mpsc::sync_channel},
+    thread::spawn, sync::{Barrier, Arc, Condvar, mpsc::{sync_channel, SyncSender, Receiver}},
 };
 
 use approx::assert_ulps_eq;
@@ -330,6 +330,47 @@ fn load_order_all_serial() {
     drop(lib3);
     drop(lib4);
     drop(lib5);
+}
+
+#[test]
+fn load_order_min_parallel() {
+    let names = ["bernoulli", "gaussian", "jacobian"];
+    let (senders, handles): (Vec<_>, Vec<_>) = names
+        .into_iter()
+        .map(|name| {
+            let (load_sender, load_receiver) = sync_channel::<()>(0);
+            let (unload_sender, unload_receiver) = sync_channel::<()>(0);
+            let (ok_sender, ok_receiver) = sync_channel::<()>(0);
+            let handle = spawn(move || {
+                load_receiver.recv().unwrap();
+                let (lib, _) = get_model(name);
+                ok_sender.send(()).unwrap();
+                unload_receiver.recv().unwrap();
+                drop(lib);
+                ok_sender.send(()).unwrap();
+            });
+            ((load_sender, unload_sender, ok_receiver), handle)
+        })
+        .unzip();
+
+    fn load(s: &(SyncSender<()>, SyncSender<()>, Receiver<()>)) {
+        s.0.send(()).unwrap();
+        s.2.recv().unwrap();
+    }
+
+    fn unload(s: &(SyncSender<()>, SyncSender<()>, Receiver<()>)) {
+        s.1.send(()).unwrap();
+        s.2.recv().unwrap();
+    }
+
+    load(&senders[0]);
+    load(&senders[1]);
+    unload(&senders[0]);
+    load(&senders[2]);
+    unload(&senders[1]);
+    unload(&senders[2]);
+
+    handles.into_iter().for_each(|h| h.join().unwrap());
 }
 
 #[test]
