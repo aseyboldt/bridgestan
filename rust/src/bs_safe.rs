@@ -5,15 +5,32 @@ use std::ffi::c_int;
 use std::ffi::c_uint;
 use std::ffi::CStr;
 use std::ffi::OsStr;
+use std::mem::ManuallyDrop;
+use std::ops::Deref;
 use std::ptr::null;
 use std::ptr::NonNull;
 use std::str::Utf8Error;
+use std::sync::Mutex;
+use once_cell::sync::Lazy;
 
 // This is more or less equivalent to manually defining Display and From<other error types>
 use thiserror::Error;
 
+
+struct StanLoader(Mutex<()>);
+
+impl StanLoader {
+    fn new() -> Self {
+        Self(Mutex::new(()))
+    }
+}
+
+static STAN_LOADER: Lazy<StanLoader> = Lazy::new(|| {
+    StanLoader::new()
+});
+
 /// A loaded shared library for a stan model
-pub use ffi::Bridgestan as StanLibrary;
+pub struct StanLibrary(ManuallyDrop<ffi::Bridgestan>);
 
 /// Error type for bridgestan interface
 #[derive(Error, Debug)]
@@ -40,6 +57,7 @@ type Result<T> = std::result::Result<T, BridgeStanError>;
 /// The library should have been compiled with bridgestan,
 /// with the same version as the rust library.
 pub fn open_library<P: AsRef<OsStr>>(path: P) -> Result<StanLibrary> {
+    let guard = STAN_LOADER.0.lock().expect("Stan loader lock was poisoned");
     let library = unsafe { libloading::Library::new(path) }?;
     let major: libloading::Symbol<*const c_int> = unsafe { library.get(b"bs_major_version") }?;
     let major = unsafe { **major };
@@ -57,7 +75,25 @@ pub fn open_library<P: AsRef<OsStr>>(path: P) -> Result<StanLibrary> {
             format!("{}.{}.{}", self_major, self_minor, self_patch),
         ));
     }
-    Ok(unsafe { StanLibrary::from_library(library) }?)
+    let lib = unsafe { StanLibrary(ManuallyDrop::new(ffi::Bridgestan::from_library(library)?)) };
+    drop(guard);
+    Ok(lib)
+}
+
+impl Drop for StanLibrary {
+    fn drop(&mut self) {
+        let guard = STAN_LOADER.0.lock().expect("Stan loader lock was poisoned");
+        unsafe { ManuallyDrop::drop(&mut self.0) };
+        drop(guard);
+    }
+}
+
+impl Deref for StanLibrary {
+    type Target = ffi::Bridgestan;
+
+    fn deref(&self) -> &Self::Target {
+        return &self.0
+    }
 }
 
 /// A Stan model instance with data
@@ -164,7 +200,6 @@ impl<T: Borrow<StanLibrary>> Model<T> {
             // If STAN_THREADS is not true, the safty guaranties we are
             // making would be incorrect
             let info = model.info();
-            /*
             if !info.to_string_lossy().contains("STAN_THREADS=true") {
                 Err(BridgeStanError::StanThreads(
                     info.to_string_lossy().into_owned(),
@@ -172,8 +207,6 @@ impl<T: Borrow<StanLibrary>> Model<T> {
             } else {
                 Ok(model)
             }
-            */
-            Ok(model)
         } else {
             Err(BridgeStanError::ConstructFailed(err.message()))
         }
