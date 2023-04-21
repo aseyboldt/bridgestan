@@ -102,13 +102,15 @@ fn load_after_unload() {
     let Err(_) = Model::new(&lib1, data1, 42) else {
         panic!("Did not return error")
     };
-    drop(lib1);
+    forget(lib1);
+    //drop(lib1);
 
     let (lib2, data2) = get_model("throw_data");
     let Err(_) = Model::new(&lib2, data2, 42) else {
         panic!("Did not return error")
     };
-    drop(lib2);
+    //drop(lib2);
+    forget(lib2);
 }
 
 #[test]
@@ -122,8 +124,10 @@ fn load_twice() {
     let Err(_) = Model::new(&lib2, data2, 42) else {
         panic!("Did not return error")
     };
-    drop(lib1);
-    drop(lib2);
+    //drop(lib1);
+    //drop(lib2);
+    forget(lib1);
+    forget(lib2);
 }
 
 #[test]
@@ -135,6 +139,7 @@ fn load_parallel() {
                 let Err(_) = Model::new(&lib1, data1, 42) else {
                     panic!("Did not return error")
                 };
+                forget(lib1);
             })
         })
         .collect();
@@ -154,6 +159,7 @@ fn throw_data() {
         panic!("Creating throw_data model return an unexpected error");
     };
     assert!(msg.contains("find this text: datafails"));
+    forget(lib);
 }
 
 #[test]
@@ -164,6 +170,8 @@ fn bad_arglength() {
     let theta = vec![];
     let mut grad = vec![];
     let _ = model.log_density_gradient(&theta[..], true, true, &mut grad[..]);
+    drop(model);
+    forget(lib);
 }
 
 #[test]
@@ -177,4 +185,6 @@ fn logp_gradient() {
         .unwrap();
     assert_ulps_eq!(logp, (2. * PI).sqrt().recip().ln() - 0.5);
     assert_ulps_eq!(grad[0], -1f64);
+    drop(model);
+    forget(lib);
 }
