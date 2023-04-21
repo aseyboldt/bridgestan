@@ -235,7 +235,7 @@ jobs:
           LIBCLANG_PATH: ${{ runner.temp }}/llvm/lib
           LLVM_CONFIG_PATH: ${{ runner.temp }}/llvm/bin/llvm-config
         run: |
-          cargo test --verbose
+          cargo test --verbose -- --nocapture
 
   # Seperate for now, weird dynamic linking issues need resolving in GHA runner
   test_clients_windows:
@@ -281,12 +281,14 @@ jobs:
           LIBCLANG_PATH: ${{ runner.temp }}/llvm/lib
           LLVM_CONFIG_PATH: ${{ runner.temp }}/llvm/bin/llvm-config
         run: |
-          cargo test -- --test-threads 1 load_twice
-          cargo test -- --test-threads 1 load_after_unload
-          cargo test -- --test-threads 1 create_all
-          cargo test -- --test-threads 1 load_parallel
-          cargo test --verbose -- --test-threads 1
-          cargo test --verbose --
+          cargo test -- --test-threads 1 --nocapture load_twice
+          cargo test -- --test-threads 1 --nocapture load_after_unload
+          cargo test -- --test-threads 1 --nocapture create_all_late_drop_fwd
+          cargo test -- --test-threads 1 --nocapture create_all_late_drop_bwd
+          cargo test -- --test-threads 1 --nocapture create_all_serial
+          cargo test -- --test-threads 1 --nocapture load_parallel
+          cargo test --verbose -- --test-threads 1 --nocapture
+          cargo test --verbose -- --nocapture
 
       - name: Install R
         uses: r-lib/actions/setup-r@v2.4.0

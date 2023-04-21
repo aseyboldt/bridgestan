@@ -37,7 +37,7 @@ fn get_model<S: AsRef<str>>(name: S) -> (StanLibrary, Option<CString>) {
 }
 
 #[test]
-fn create_all() {
+fn create_all_serial() {
     let base = model_dir();
     for path in base.read_dir().unwrap() {
         let path = path.unwrap().path();
@@ -55,7 +55,71 @@ fn create_all() {
             continue;
         };
         assert!(model.name().unwrap().contains(name));
+        println!("{}", name);
     }
+}
+
+#[test]
+fn create_all_late_drop_bwd() {
+    let base = model_dir();
+    let names: Vec<String> = base
+        .read_dir()
+        .unwrap()
+        .map(|path| {
+            let path = path.unwrap().path();
+            path.file_name().unwrap().to_str().unwrap().to_string()
+        })
+        .collect();
+
+    let handles: Vec<_> = names
+        .into_iter()
+        .filter(|name| {
+            (name != "logistic") & (name != "regression") & (name != "syntax_error")
+        })
+        .map(|name| {
+            println!("Load {}", name);
+            let (lib, _) = get_model(&name);
+            (lib, name)
+        })
+        .collect();
+    handles
+        .into_iter()
+        .rev()
+        .for_each(|(lib, name)| {
+            println!("Drop bwd {}", name);
+            drop(lib)
+        })
+}
+
+#[test]
+fn create_all_late_drop_fwd() {
+    let base = model_dir();
+    let names: Vec<String> = base
+        .read_dir()
+        .unwrap()
+        .map(|path| {
+            let path = path.unwrap().path();
+            path.file_name().unwrap().to_str().unwrap().to_string()
+        })
+        .collect();
+
+    let handles: Vec<_> = names
+        .into_iter()
+        .filter(|name| {
+            (name != "logistic") & (name != "regression") & (name != "syntax_error")
+        })
+        .map(|name| {
+            println!("Load {}", name);
+            let (lib, _) = get_model(&name);
+            (lib, name)
+        })
+        .collect();
+    handles
+        .into_iter()
+        .for_each(|(lib, name)| {
+            println!("Drop fwd {}", name);
+            drop(lib)
+        })
 }
 
 #[test]
