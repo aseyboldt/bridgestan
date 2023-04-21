@@ -83,6 +83,7 @@ pub fn open_library<P: AsRef<OsStr>>(path: P) -> Result<StanLibrary> {
         lib: ManuallyDrop::new(ffi::Bridgestan::from_library(library)?),
         name: path.as_ref().to_string_lossy().to_string(),
     }};
+    println!("Done loading");
     drop(guard);
     Ok(lib)
 }
@@ -96,6 +97,7 @@ impl Drop for StanLibrary {
         if let Err(err) = res {
             println!("Failed to unload library: {} with error {:?}", &self.name, err);
         }
+        println!("Done unloading");
         drop(guard);
     }
 }

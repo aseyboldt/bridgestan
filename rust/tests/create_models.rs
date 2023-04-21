@@ -318,6 +318,32 @@ fn load_twice_same() {
 }
 
 #[test]
+fn load_order_all_serial() {
+    let (lib1, _) = get_model("bernoulli");
+    let (lib2, _) = get_model("fr_gaussian");
+    let (lib3, _) = get_model("full");
+    let (lib4, _) = get_model("gaussian");
+    drop(lib1);
+    let (lib5, _) = get_model("jacobian");
+
+    drop(lib2);
+    drop(lib3);
+    drop(lib4);
+    drop(lib5);
+}
+
+#[test]
+fn load_order_min_serial() {
+    let (lib1, _) = get_model("bernoulli");
+    let (lib2, _) = get_model("gaussian");
+    drop(lib1);
+    let (lib3, _) = get_model("jacobian");
+
+    drop(lib2);
+    drop(lib3);
+}
+
+#[test]
 fn load_parallel() {
     let handles: Vec<_> = (0..50)
         .map(|_| {
