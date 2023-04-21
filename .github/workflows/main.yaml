@@ -281,13 +281,17 @@ jobs:
           LIBCLANG_PATH: ${{ runner.temp }}/llvm/lib
           LLVM_CONFIG_PATH: ${{ runner.temp }}/llvm/bin/llvm-config
         run: |
-          cargo test -- --test-threads 1 --nocapture load_twice
-          cargo test -- --test-threads 1 --nocapture load_after_unload
           cargo test -- --test-threads 1 --nocapture create_all_late_drop_fwd
           cargo test -- --test-threads 1 --nocapture create_all_late_drop_bwd
           cargo test -- --test-threads 1 --nocapture create_all_serial
           cargo test -- --test-threads 1 --nocapture create_all_thread_serial
           cargo test -- --test-threads 1 --nocapture create_all_thread_barrier_serial
+          cargo test -- --test-threads 1 --nocapture load_twice_same
+          cargo test -- --test-threads 1 --nocapture load_after_unload_same
+          cargo test -- --test-threads 1 --nocapture load_twice_diff
+          cargo test -- --test-threads 1 --nocapture load_after_unload_diff
+          cargo test -- --test-threads 1 --nocapture load_twice_reorder_diff
+          cargo test -- --test-threads 1 --nocapture create_all_parallel
           cargo test -- --test-threads 1 --nocapture load_parallel
           cargo test --verbose -- --test-threads 1 --nocapture
           cargo test --verbose -- --nocapture

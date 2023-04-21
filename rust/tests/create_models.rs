@@ -261,7 +261,16 @@ fn create_all_parallel() {
 }
 
 #[test]
-fn load_after_unload() {
+fn load_after_unload_diff() {
+    let (lib1, data1) = get_model("throw_data");
+    drop(lib1);
+
+    let (lib2, data2) = get_model("stdnormal");
+    drop(lib2);
+}
+
+#[test]
+fn load_after_unload_same() {
     let (lib1, data1) = get_model("throw_data");
     let Err(_) = Model::new(&lib1, data1, 42) else {
         panic!("Did not return error")
@@ -276,7 +285,25 @@ fn load_after_unload() {
 }
 
 #[test]
-fn load_twice() {
+fn load_twice_diff() {
+    let (lib1, data1) = get_model("throw_data");
+    let (lib2, data2) = get_model("stdnormal");
+
+    drop(lib1);
+    drop(lib2);
+}
+
+#[test]
+fn load_twice_reorder_diff() {
+    let (lib1, data1) = get_model("throw_data");
+    let (lib2, data2) = get_model("stdnormal");
+
+    drop(lib2);
+    drop(lib1);
+}
+
+#[test]
+fn load_twice_same() {
     let (lib1, data1) = get_model("throw_data");
     let (lib2, data2) = get_model("throw_data");
 
