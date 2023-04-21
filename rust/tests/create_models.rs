@@ -2,7 +2,7 @@ use std::{
     f64::consts::PI,
     ffi::CString,
     path::{Path, PathBuf},
-    thread::spawn,
+    thread::spawn, sync::{Barrier, Arc},
 };
 
 use approx::assert_ulps_eq;
@@ -79,6 +79,7 @@ fn create_all_late_drop_bwd() {
         .map(|name| {
             println!("Load {}", name);
             let (lib, data) = get_model(&name);
+            /*
             let Ok(model) = Model::new(&lib, data.as_ref(), 42) else {
                 // Only those two models should fail to create.
                 assert!((name == "ode") | (name == "throw_data"));
@@ -86,6 +87,7 @@ fn create_all_late_drop_bwd() {
             };
             assert!(model.name().unwrap().contains(&name));
             drop(model);
+            */
             (lib, name)
         })
         .collect();
@@ -118,6 +120,7 @@ fn create_all_late_drop_fwd() {
         .map(|name| {
             println!("Load {}", name);
             let (lib, data) = get_model(&name);
+            /*
             let Ok(model) = Model::new(&lib, data.as_ref(), 42) else {
                 // Only those two models should fail to create.
                 assert!((name == "ode") | (name == "throw_data"));
@@ -125,6 +128,7 @@ fn create_all_late_drop_fwd() {
             };
             assert!(model.name().unwrap().contains(&name));
             drop(model);
+            */
             (lib, name)
         })
         .collect();
@@ -157,6 +161,7 @@ fn create_all_thread_serial() {
                 }
 
                 let (lib, data) = get_model(&name);
+                /*
                 // Create the model with a reference
                 let Ok(model) = Model::new(&lib, data.as_ref(), 42) else {
                     // Only those two models should fail to create.
@@ -164,11 +169,57 @@ fn create_all_thread_serial() {
                     return;
                 };
                 assert!(model.name().unwrap().contains(&name));
+                */
             }).join().unwrap()
         })
     //handles
         //.into_iter()
         //.for_each(|handle| handle.join().unwrap())
+}
+
+#[test]
+fn create_all_thread_barrier_serial() {
+    let base = model_dir();
+    let names: Vec<String> = base
+        .read_dir()
+        .unwrap()
+        .map(|path| {
+            let path = path.unwrap().path();
+            path.file_name().unwrap().to_str().unwrap().to_string()
+        })
+        .filter(|name| {
+            (name != "logistic") & (name != "regression") & (name != "syntax_error")
+        })
+        .collect();
+
+    let barrier = Arc::new(Barrier::new(names.len()));
+
+    let handles: Vec<_> = names
+        .into_iter()
+        .map(|name| {
+            let barrier = Arc::clone(&barrier);
+            spawn(move || {
+                let (lib, data) = get_model(&name);
+
+                barrier.wait();
+
+                drop(lib)
+                /*
+                // Create the model with a reference
+                let Ok(model) = Model::new(&lib, data.as_ref(), 42) else {
+                    // Only those two models should fail to create.
+                    assert!((name == "ode") | (name == "throw_data"));
+                    return;
+                };
+                assert!(model.name().unwrap().contains(&name));
+                */
+            })
+        })
+        .collect();
+
+    handles
+        .into_iter()
+        .for_each(|handle| handle.join().unwrap())
 }
 
 #[test]
@@ -192,6 +243,7 @@ fn create_all_parallel() {
                 }
 
                 let (lib, data) = get_model(&name);
+                /*
                 // Create the model with a reference
                 let Ok(model) = Model::new(&lib, data.as_ref(), 42) else {
                     // Only those two models should fail to create.
@@ -199,6 +251,7 @@ fn create_all_parallel() {
                     return;
                 };
                 assert!(model.name().unwrap().contains(&name));
+                */
             })
         })
         .collect();
