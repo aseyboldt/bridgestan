@@ -2,7 +2,7 @@ use std::{
     f64::consts::PI,
     ffi::CString,
     path::{Path, PathBuf},
-    thread::spawn, sync::{Barrier, Arc},
+    thread::spawn, sync::{Barrier, Arc, Condvar, mpsc::sync_channel},
 };
 
 use approx::assert_ulps_eq;
@@ -330,6 +330,62 @@ fn load_order_all_serial() {
     drop(lib3);
     drop(lib4);
     drop(lib5);
+}
+
+#[test]
+fn load_order_all_parallel() {
+    let names = ["bernoulli", "fr_gaussian", "full", "gaussian", "jacobian"];
+    let (senders, handles): (Vec<_>, Vec<_>) = names
+        .into_iter()
+        .map(|name| {
+            let (load_sender, load_receiver) = sync_channel::<()>(0);
+            let (unload_sender, unload_receiver) = sync_channel::<()>(0);
+            let (ok_sender, ok_receiver) = sync_channel::<()>(0);
+            let handle = spawn(move || {
+                load_receiver.recv().unwrap();
+                let (lib, _) = get_model(name);
+                ok_sender.send(()).unwrap();
+                unload_receiver.recv().unwrap();
+                drop(lib);
+                ok_sender.send(()).unwrap();
+            });
+            ((load_sender, unload_sender, ok_receiver), handle)
+        })
+        .unzip();
+
+    senders[0].0.send(()).unwrap();
+    senders[0].2.recv().unwrap();
+
+    senders[1].0.send(()).unwrap();
+    senders[1].2.recv().unwrap();
+
+    senders[2].0.send(()).unwrap();
+    senders[2].2.recv().unwrap();
+
+    senders[3].0.send(()).unwrap();
+    senders[3].2.recv().unwrap();
+
+    // unload 0
+    senders[0].1.send(()).unwrap();
+    senders[0].2.recv().unwrap();
+
+    // load 4
+    senders[4].0.send(()).unwrap();
+    senders[4].2.recv().unwrap();
+
+    senders[1].1.send(()).unwrap();
+    senders[1].2.recv().unwrap();
+
+    senders[2].1.send(()).unwrap();
+    senders[2].2.recv().unwrap();
+
+    senders[3].1.send(()).unwrap();
+    senders[3].2.recv().unwrap();
+
+    senders[4].1.send(()).unwrap();
+    senders[4].2.recv().unwrap();
+
+    handles.into_iter().for_each(|h| h.join().unwrap());
 }
 
 #[test]

@@ -115,6 +115,7 @@ jobs:
           cargo test -- --test-threads 1 --nocapture create_all_thread_barrier_serial
           cargo test -- --test-threads 1 --nocapture load_order_min_serial
           cargo test -- --test-threads 1 --nocapture load_order_all_serial
+          cargo test -- --test-threads 1 --nocapture load_order_all_parallel
           cargo test -- --test-threads 1 --nocapture load_twice_same
           cargo test -- --test-threads 1 --nocapture load_after_unload_same
           cargo test -- --test-threads 1 --nocapture load_twice_diff

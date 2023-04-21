@@ -63,6 +63,7 @@ pub fn open_library<P: AsRef<OsStr>>(path: P) -> Result<StanLibrary> {
     let guard = STAN_LOADER.0.lock().expect("Stan loader lock was poisoned");
     println!("Loading library {:?}", path.as_ref().to_str());
     let library = unsafe { libloading::Library::new(&path) }?;
+    println!("Read library");
     let major: libloading::Symbol<*const c_int> = unsafe { library.get(b"bs_major_version") }?;
     let major = unsafe { **major };
     let minor: libloading::Symbol<*const c_int> = unsafe { library.get(b"bs_minor_version") }?;
@@ -79,6 +80,7 @@ pub fn open_library<P: AsRef<OsStr>>(path: P) -> Result<StanLibrary> {
             format!("{}.{}.{}", self_major, self_minor, self_patch),
         ));
     }
+    println!("Checked versions");
     let lib = unsafe { StanLibrary {
         lib: ManuallyDrop::new(ffi::Bridgestan::from_library(library)?),
         name: path.as_ref().to_string_lossy().to_string(),
