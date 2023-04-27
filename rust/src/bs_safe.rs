@@ -31,7 +31,7 @@ pub struct StanLibrary {
 impl Drop for StanLibrary {
     fn drop(&mut self) {
         let lib = unsafe { ManuallyDrop::take(&mut self.lib) };
-        forget(lib.into_library());
+        drop(lib.into_library());
     }
 }
 
