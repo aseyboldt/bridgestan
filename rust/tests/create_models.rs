@@ -248,10 +248,8 @@ fn load_order_min_parallel() {
                 ok_sender.send(()).unwrap();
 
                 unload_receiver.recv().unwrap();
-                drop(lib);
+                unsafe { lib.unload_library() };
                 ok_sender.send(()).unwrap();
-
-                exit_receiver.recv().unwrap();
             });
             (
                 (load_sender, unload_sender, exit_sender, ok_receiver),
@@ -277,13 +275,13 @@ fn load_order_min_parallel() {
     load(&senders[0]);
     load(&senders[1]);
     unload(&senders[0]);
+    //exit(&senders[0]);
+    // Potential deadlock if we actually unload the libraries
     load(&senders[2]);
     unload(&senders[1]);
+    //exit(&senders[1]);
     unload(&senders[2]);
-
-    exit(&senders[0]);
-    exit(&senders[1]);
-    exit(&senders[2]);
+    //exit(&senders[2]);
 
     handles.into_iter().for_each(|h| h.join().unwrap());
 }
